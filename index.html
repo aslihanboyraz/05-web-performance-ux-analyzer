@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Performans &amp; UX Teşhis Platformu v2.0</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-copy">
+      <p class="eyebrow">Staj Projesi 05</p>
+      <h1>Web Performans &amp; UX Teşhis Platformu v2.0</h1>
+    </div>
+    <p id="observer-status" class="status-pill" role="status">Gözlemciler başlatılıyor</p>
+  </header>
+
+  <main class="layout">
+    <section class="panel" aria-labelledby="lab-title">
+      <div class="panel-head">
+        <h2 id="lab-title">Etkileşim &amp; Test Alanı</h2>
+        <p>Soldaki sahne, ölçülen sayfanın kendisidir. Senaryoyu değiştirince DOM, kayma ve tıklama maliyeti gerçekten değişir.</p>
+      </div>
+
+      <div id="scenarios" class="scenarios" role="tablist" aria-label="Sayfa senaryoları">
+        <button type="button" class="ghost is-on" data-scenario="sade">Sade sayfa</button>
+        <button type="button" class="ghost" data-scenario="urun">Ürün vitrini</button>
+        <button type="button" class="ghost" data-scenario="agir">Ağır katalog</button>
+        <button type="button" class="ghost" data-scenario="kayma">Kaymalı yerleşim</button>
+        <button type="button" class="ghost" data-scenario="yavas">Yavaş işlem</button>
+      </div>
+      <p id="scenario-note" class="hint">Sade sayfa açık. Yazım ve tıklama ölçülür; ek yük yoktur.</p>
+      <div id="stage" class="stage"></div>
+
+      <h3 class="section-label">Yazım profili</h3>
+      <form id="ux-form" class="form" autocomplete="off" novalidate>
+        <label class="field">
+          <span>Ad</span>
+          <input id="field-name" name="name" type="text" maxlength="80" placeholder="Adınızı yazın">
+        </label>
+        <label class="field">
+          <span>E-posta</span>
+          <input id="field-email" name="email" type="email" maxlength="120" placeholder="ornek@alan.com" inputmode="email">
+        </label>
+        <label class="field">
+          <span>Geri Bildirim</span>
+          <textarea id="field-feedback" name="feedback" rows="5" maxlength="2000" placeholder="Kısa bir geri bildirim yazın. Backspace kullanımı hata skoruna yansır."></textarea>
+        </label>
+      </form>
+
+      <div class="zone">
+        <div class="zone-head">
+          <h3>Tıklama &amp; Fare Test Alanı</h3>
+          <p>Tıklamalar tuval üzerinde ısı noktaları olarak birikir.</p>
+        </div>
+        <canvas id="heat-canvas" width="640" height="280" aria-label="Tıklama ısı haritası"></canvas>
+      </div>
+
+      <div class="actions">
+        <button id="btn-sim" type="button">Örnek Simülasyon Çalıştır</button>
+        <button id="btn-reset" type="button" class="ghost">Metrikleri Sıfırla</button>
+      </div>
+      <p class="hint">Sıfırlama oturum metriklerini, logu ve ısı haritasını temizler. Sayfa yükleme ölçümleri (LCP ve gezinme) korunur.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="dash-title">
+      <div class="panel-head">
+        <h2 id="dash-title">Gelişmiş Metrikler &amp; Dashboard</h2>
+        <p>Eşikler: LCP ≤ 2,5 sn iyi, INP ≤ 200 ms iyi, CLS ≤ 0,10 iyi.</p>
+      </div>
+
+      <article class="card">
+        <div class="card-head">
+          <h3>Teşhis</h3>
+          <button id="btn-baseline" type="button" class="ghost">Referans al</button>
+        </div>
+        <p id="diagnosis-lead" class="score">Oturum notu hesaplanıyor</p>
+        <ul id="diagnosis-list" class="diagnosis"></ul>
+      </article>
+
+      <article class="card">
+        <h3>Core Web Vitals</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Metrik</th>
+                <th>Değer</th>
+                <th>Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>LCP</td>
+                <td id="val-lcp">Ölçülmedi</td>
+                <td><span id="badge-lcp" class="badge wait">Bekleniyor</span></td>
+              </tr>
+              <tr>
+                <td>INP</td>
+                <td id="val-inp">Ölçülmedi</td>
+                <td><span id="badge-inp" class="badge wait">Bekleniyor</span></td>
+              </tr>
+              <tr>
+                <td>CLS</td>
+                <td id="val-cls">0,000</td>
+                <td><span id="badge-cls" class="badge good">İyi</span></td>
+              </tr>
+              <tr>
+                <td>FCP</td>
+                <td id="val-fcp">Ölçülmedi</td>
+                <td><span id="badge-fcp" class="badge wait">Bekleniyor</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card">
+        <h3>Sistem &amp; DOM Sağlığı</h3>
+        <dl class="metrics">
+          <div>
+            <dt>Toplam DOM Düğüm Sayısı</dt>
+            <dd id="val-nodes">—</dd>
+          </div>
+          <div>
+            <dt>Maksimum Ağaç Derinliği</dt>
+            <dd id="val-depth">—</dd>
+          </div>
+          <div>
+            <dt>JS Heap Bellek Kullanımı</dt>
+            <dd id="val-heap">—</dd>
+          </div>
+          <div>
+            <dt>TTFB</dt>
+            <dd id="val-ttfb">—</dd>
+          </div>
+          <div>
+            <dt>DOM Content Loaded</dt>
+            <dd id="val-dcl">—</dd>
+          </div>
+          <div>
+            <dt>Load</dt>
+            <dd id="val-load">—</dd>
+          </div>
+          <div>
+            <dt>Uzun görev</dt>
+            <dd id="val-long">0</dd>
+          </div>
+          <div>
+            <dt>Kaynak sayısı</dt>
+            <dd id="val-resources">0</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="card">
+        <h3>Etkileşim &amp; Hız Analizi</h3>
+        <dl class="metrics">
+          <div>
+            <dt>WPM</dt>
+            <dd id="val-wpm">0</dd>
+          </div>
+          <div>
+            <dt>CPS</dt>
+            <dd id="val-cps">0</dd>
+          </div>
+          <div>
+            <dt>Hata / Silme Oranı</dt>
+            <dd id="val-error">0%</dd>
+          </div>
+          <div>
+            <dt>Odaklanma Süresi</dt>
+            <dd id="val-focus">0,0 sn</dd>
+          </div>
+          <div>
+            <dt>Ort. Tuş Basılı Tutma</dt>
+            <dd id="val-hold">—</dd>
+          </div>
+          <div>
+            <dt>Ort. Tuşlar Arası Gecikme</dt>
+            <dd id="val-gap">—</dd>
+          </div>
+        </dl>
+      </article>
+
+      <article class="card">
+        <h3>Canlı Etkileşim Logu</h3>
+        <div class="table-wrap log-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Zaman</th>
+                <th>Olay Tipi</th>
+                <th>Hedef Eleman</th>
+                <th>Gecikme</th>
+              </tr>
+            </thead>
+            <tbody id="log-body">
+              <tr class="empty-row">
+                <td colspan="4">Henüz olay yok. Bir alana yazın veya ısı haritasına tıklayın.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <div class="actions">
+        <button id="btn-json" type="button">JSON İndir</button>
+        <button id="btn-csv" type="button" class="ghost">CSV İndir</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
