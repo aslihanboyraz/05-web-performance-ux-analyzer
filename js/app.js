@@ -712,54 +712,89 @@
     return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "-" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
   }
 
-  function csvCell(value) {
-    var text = value == null ? "" : String(value);
-    if (/[",\n;]/.test(text)) return '"' + text.replace(/"/g, '""') + '"';
-    return text;
+  function escapeHtml(value) {
+    return String(value == null ? "—" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
-  function exportJson() {
-    download("performans-ux-rapor-" + stamp() + ".json", "application/json;charset=utf-8", JSON.stringify(snapshot(), null, 2));
+  function reportRow(label, value) {
+    return "<tr><th>" + escapeHtml(label) + "</th><td>" + escapeHtml(value) + "</td></tr>";
   }
 
-  function exportCsv() {
+  function exportHtml() {
     var data = snapshot();
-    var lines = ["bolum,alan,deger"];
-    function add(section, key, value) {
-      lines.push([csvCell(section), csvCell(key), csvCell(value)].join(","));
+    var titles = { sade: "Sade sayfa", urun: "Ürün vitrini", agir: "Ağır katalog", kayma: "Kaymalı yerleşim", yavas: "Yavaş işlem" };
+    var heap = data.memory
+      ? formatNumber(data.memory.usedJSHeapSize / (1024 * 1024), 2) + " MB"
+      : "Desteklenmiyor";
+    var notes = document.querySelectorAll("#diagnosis-list li");
+    var noteHtml = "";
+    for (var n = 0; n < notes.length; n++) noteHtml += "<li>" + escapeHtml(notes[n].textContent) + "</li>";
+    var logHtml = "";
+    if (!data.log.length) {
+      logHtml = "<tr><td colspan=\"4\">Kayıt yok</td></tr>";
+    } else {
+      for (var i = 0; i < data.log.length; i++) {
+        var row = data.log[i];
+        logHtml += "<tr><td>" + escapeHtml(row.time) + "</td><td>" + escapeHtml(row.type) + "</td><td>" + escapeHtml(row.target) + "</td><td>" + escapeHtml(formatMs(row.latency)) + "</td></tr>";
+      }
     }
-    add("oturum", "senaryo", data.scenario);
-    add("oturum", "not", data.sessionScore);
-    add("core-web-vitals", "lcp_ms", data.coreWebVitals.lcpMs);
-    add("core-web-vitals", "fcp_ms", data.coreWebVitals.fcpMs);
-    add("core-web-vitals", "lcp_durum", data.coreWebVitals.lcpRating);
-    add("core-web-vitals", "inp_ms", data.coreWebVitals.inpMs);
-    add("core-web-vitals", "inp_durum", data.coreWebVitals.inpRating);
-    add("core-web-vitals", "cls", data.coreWebVitals.cls);
-    add("core-web-vitals", "cls_durum", data.coreWebVitals.clsRating);
-    add("uzun-gorev", "adet", data.longTasks.count);
-    add("uzun-gorev", "en_uzun_ms", data.longTasks.maxMs);
-    add("dom", "dugum", data.dom.nodes);
-    add("dom", "maks_derinlik", data.dom.maxDepth);
-    add("bellek", "used_js_heap", data.memory ? data.memory.usedJSHeapSize : "");
-    add("yazim", "wpm", data.typing.wpm.toFixed(2));
-    add("yazim", "cps", data.typing.cps.toFixed(2));
-    add("yazim", "hata_orani_yuzde", data.typing.errorRatePercent.toFixed(2));
-    add("yazim", "odak_ms", data.typing.focusMs.toFixed(0));
-    add("yazim", "ort_tus_basili_ms", data.typing.avgKeyHoldMs);
-    add("yazim", "ort_tus_arasi_ms", data.typing.avgInterKeyDelayMs);
-    if (data.navigation) {
-      add("gezinme", "ttfb_ms", data.navigation.ttfbMs);
-      add("gezinme", "dcl_ms", data.navigation.domContentLoadedMs);
-      add("gezinme", "load_ms", data.navigation.loadMs);
-    }
-    lines.push("");
-    lines.push(["zaman", "olay", "hedef", "gecikme_ms"].join(","));
-    for (var i = 0; i < data.log.length; i++) {
-      var row = data.log[i];
-      lines.push([csvCell(row.time), csvCell(row.type), csvCell(row.target), csvCell(row.latency)].join(","));
-    }
-    download("performans-ux-rapor-" + stamp() + ".csv", "text/csv;charset=utf-8", lines.join("\n"));
+    var nav = data.navigation;
+    var html = [
+      "<!DOCTYPE html>",
+      "<html lang=\"tr\"><head><meta charset=\"utf-8\">",
+      "<title>Performans ve UX Raporu</title>",
+      "<style>",
+      "body{margin:0;padding:32px;font-family:Segoe UI,system-ui,sans-serif;color:#17202a;background:#f4f7fb}",
+      "h1{margin:0 0 6px;font-size:28px} h2{margin:28px 0 10px;font-size:18px}",
+      "p{margin:0;color:#52616f} table{width:100%;border-collapse:collapse;background:#fff}",
+      "th,td{padding:8px 10px;border-bottom:1px solid #d9e2ec;text-align:left;font-size:14px}",
+      "th{color:#52616f;font-weight:600} .pairs th{width:42%} .card{background:#fff;border:1px solid #d9e2ec;border-radius:12px;padding:16px 18px;margin-top:16px}",
+      "ul{margin:8px 0 0;padding-left:18px} li{margin:6px 0}",
+      "</style></head><body>",
+      "<p>Staj Projesi 05</p>",
+      "<h1>Web Performans ve UX Teşhis Raporu</h1>",
+      "<p>" + escapeHtml(new Date(data.generatedAt).toLocaleString("tr-TR")) + "</p>",
+      "<section class=\"card\"><h2>Oturum</h2><table class=\"pairs\">",
+      reportRow("Senaryo", titles[data.scenario] || data.scenario),
+      reportRow("Oturum notu", data.sessionScore + " / 100"),
+      reportRow("Isı haritası tıklaması", data.heatmapClicks),
+      "</table>",
+      noteHtml ? "<ul>" + noteHtml + "</ul>" : "",
+      "</section>",
+      "<section class=\"card\"><h2>Core Web Vitals</h2><table class=\"pairs\">",
+      reportRow("LCP", formatMs(data.coreWebVitals.lcpMs) + " · " + data.coreWebVitals.lcpRating),
+      reportRow("INP", formatMs(data.coreWebVitals.inpMs) + " · " + data.coreWebVitals.inpRating),
+      reportRow("CLS", formatNumber(data.coreWebVitals.cls, 3) + " · " + data.coreWebVitals.clsRating),
+      reportRow("FCP", formatMs(data.coreWebVitals.fcpMs) + " · " + data.coreWebVitals.fcpRating),
+      "</table></section>",
+      "<section class=\"card\"><h2>Sistem ve DOM</h2><table class=\"pairs\">",
+      reportRow("DOM düğüm sayısı", data.dom.nodes),
+      reportRow("Maksimum ağaç derinliği", data.dom.maxDepth),
+      reportRow("JS heap", heap),
+      reportRow("Uzun görev", data.longTasks.count + (data.longTasks.maxMs ? " · en uzun " + formatMs(data.longTasks.maxMs) : "")),
+      reportRow("TTFB", nav ? formatMs(nav.ttfbMs) : "—"),
+      reportRow("DOM Content Loaded", nav ? formatMs(nav.domContentLoadedMs) : "—"),
+      reportRow("Load", nav ? formatMs(nav.loadMs) : "—"),
+      "</table></section>",
+      "<section class=\"card\"><h2>Etkileşim ve hız</h2><table class=\"pairs\">",
+      reportRow("WPM", formatNumber(data.typing.wpm, 0)),
+      reportRow("CPS", formatNumber(data.typing.cps, 1)),
+      reportRow("Hata / silme oranı", formatNumber(data.typing.errorRatePercent, 1) + "%"),
+      reportRow("Odaklanma süresi", formatMs(data.typing.focusMs)),
+      reportRow("Ort. tuş basılı tutma", formatMs(data.typing.avgKeyHoldMs)),
+      reportRow("Ort. tuşlar arası gecikme", formatMs(data.typing.avgInterKeyDelayMs)),
+      "</table></section>",
+      "<section class=\"card\"><h2>Olay günlüğü</h2><table>",
+      "<tr><th>Zaman</th><th>Olay tipi</th><th>Hedef eleman</th><th>Gecikme</th></tr>",
+      logHtml,
+      "</table></section>",
+      "</body></html>"
+    ].join("");
+    download("performans-ux-rapor-" + stamp() + ".html", "text/html;charset=utf-8", html);
   }
 
   function stopSimulation() {
@@ -881,8 +916,7 @@
   document.addEventListener("pointerdown", onPointerDown);
   $("btn-sim").addEventListener("click", function () { runSimulation(); });
   $("btn-reset").addEventListener("click", resetSession);
-  $("btn-json").addEventListener("click", exportJson);
-  $("btn-csv").addEventListener("click", exportCsv);
+  $("btn-html").addEventListener("click", exportHtml);
   $("btn-baseline").addEventListener("click", takeBaseline);
   $("scenarios").addEventListener("click", function (event) {
     var button = event.target.closest("[data-scenario]");

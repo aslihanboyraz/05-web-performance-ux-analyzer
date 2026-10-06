@@ -37,7 +37,7 @@ Yazım profili (Ad, E-posta, Geri Bildirim) tuş basılı tutma süresini, tuşl
 - **Sistem ve DOM:** düğüm sayısı, maksimum ağaç derinliği, JS heap (`performance.memory`), TTFB, DOMContentLoaded, Load, uzun görev ve kaynak sayısı.
 - **Etkileşim:** WPM, CPS, hata/silme oranı, odaklanma süresi, ortalama tuş basılı tutma ve tuşlar arası gecikme.
 - **Canlı log:** zaman, olay tipi, hedef eleman, gecikme.
-- **JSON İndir / CSV İndir:** anlık ölçümü `Blob` ile dosyaya çevirir.
+- **HTML Rapor İndir:** anlık ölçümü tek bir HTML dosyası olarak `Blob` ile indirir.
 
 Eşikler: LCP 2,5 sn / 4 sn, INP 200 ms / 500 ms, CLS 0,10 / 0,25, FCP 1,8 sn / 3 sn.
 
